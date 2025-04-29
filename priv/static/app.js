@@ -137,6 +137,7 @@ const renderConfig = function() {
         </select>
       </li>
       <li>Jira bearer: <input type="text" value="${jiraBearer}" disabled/></li>
+      <li>Jira base url: <input type="text" value="${jiraBaseUrl}" disabled/></li>
     </ul>
   `
   configWidget.innerHTML = content
