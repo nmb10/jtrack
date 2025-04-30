@@ -4,15 +4,17 @@ stop timer and log time to jira.
 
 ## Installation:
 
-Installation requires erlang, recommended version is Erlang/OTP 25
+Note: Installation requires erlang, recommended version is Erlang/OTP 25
 
-Clone the repo
+1. Clone the repo
+
+2. Run app
 ```bash
 cd ./jtrack
 make run
 ```
 
-open http://localhost:8087/ in browser.
+3. open http://localhost:8087/ in browser.
 
 ## Initial configuration:
 Set `Jira Bearer Token`
