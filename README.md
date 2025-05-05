@@ -1,6 +1,6 @@
 # jtrack
-Minimalistic time tracking tool app for jira issues. Just start timer,
-stop timer and log time to jira.
+Minimalistic local time tracking tool for jira issues. Just start the timer,
+stop the timer and log time to jira.
 
 ## Installation:
 
@@ -19,11 +19,11 @@ make run
 ## Initial configuration:
 - Set `Jira Bearer Token`
 - Set `Jira Base Url`
-- Click `Check connection` to verify creds are correct.
-- Click `Fetch issues`
+- Click `Check connection` to verify creds are correct. FIXME: Implement
+- Click `Fetch issues` FIXME: Implement.
 List of your issues should be loaded now and the app is ready to track Jira issues.
 
 ## Usage:
-- Click 'Toggle' on the issue you want to track;
-- When finish to work on the issue, click 'Toggle' again to stop to track that issue or click on other issue's 'Toggle';
-- When the day work is finished, click 'Save' on the issue to save the issue time to Jira.
+- Click 'Toggle' on the issue you want to track (or 'w');
+- When finish to work on the issue, click 'Toggle' again (or 'w') to stop to track that issue or click on other issue's 'Toggle' (or 'w');
+- When the day work is finished, click 'Save' on the issue on the history (left) side to save the issue time to Jira.
