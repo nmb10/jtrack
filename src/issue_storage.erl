@@ -64,7 +64,7 @@ handle_cast({fixme, Issue}, State) ->
 handle_info(fetch_issues, State) ->
     {_, _, CurrentIssue} = State,
 
-    io:format("Fetching issues now...\n"),
+    io:format("[issue_storage] Fetching issues now...\n"),
 
     JqlQuery = uri_string:quote(
         "assignee = currentUser() and status in (\"New\", \"To Do\", \"In Progress\")"),
@@ -74,7 +74,7 @@ handle_info(fetch_issues, State) ->
     Method = get,
     URL = io_lib:format(
             "https://~s/rest/api/2/search?jql=~s",
-            [config_storage:get(<<"jira_base_url">>), JqlQuery]),
+            [config_storage:get(<<"jira_domain">>), JqlQuery]),
     Headers = [{"Authorization", "Bearer " ++ config_storage:get(<<"jira_bearer">>)}],
     Payload = <<>>,
     Options = [],
@@ -82,10 +82,14 @@ handle_info(fetch_issues, State) ->
         Method, URL, Headers, Payload, Options),
 
     % Simplify issue structure
+    JiraDomain = config_storage:get(<<"jira_domain">>),
+
     Fun = fun (Issue) ->
         Fields = maps:get(<<"fields">>, Issue),
+        IssueKey = maps:get(<<"key">>, Issue),
         #{<<"title">> => maps:get(<<"summary">>, Fields),
-          <<"key">> => maps:get(<<"key">>, Issue),
+          <<"key">> => IssueKey,
+          <<"url">> => <<"https://", JiraDomain/binary, "/browse/", IssueKey/binary>>,
           <<"status">> => maps:get(<<"name">>, maps:get(<<"status">>, Fields))}
     end,
 
@@ -95,10 +99,6 @@ handle_info(fetch_issues, State) ->
             SearchResponseMap = jiffy:decode(ResponseBody, [return_maps]),
             IssueList = maps:get(<<"issues">>, SearchResponseMap),
 
-            % io:format("Body...~p\n", [maps:keys(lists:nth(1, IssueList))]),
-            % io:format("Body...~p\n", [Fun(lists:nth(1, IssueList))]),
-
-            % NewIssues1 = MyIssues, % lists:append(NewIssues, MyIssues),
             MyIssues0 = lists:map(Fun, IssueList),
             Dump = jiffy:encode(MyIssues0, [pretty]),
             FileName = '/tmp/jtrack-issues-cache.json',
@@ -107,7 +107,7 @@ handle_info(fetch_issues, State) ->
             MyIssues0;
         _ ->
             % FIXME: Notify frontend about the problem with issue upgrade.
-            io:format("Failed to fetch issues. Returning issues from previous success response. StatusCode: ~p\n", [StatusCode]),
+            io:format("[issue_storage] Failed to fetch issues. Returning issues from previous success response (if exists). StatusCode: ~p\n", [StatusCode]),
 
             FileName = '/tmp/jtrack-issues-cache.json',
             MyIssues0 = case filelib:is_regular(FileName) of
@@ -120,6 +120,7 @@ handle_info(fetch_issues, State) ->
             MyIssues0
     end,
     FeaturedIssues = config_storage:get(<<"featured_issues">>),
-    erlang:send_after(10 * 60 * 1000, self(), fetch_issues),
+    io:format("[issue_storage] Issues fetching finished.\n"),
+    erlang:send_after(1 * 60 * 1000, self(), fetch_issues),
     NewState = {FeaturedIssues, MyIssues, CurrentIssue},
     {noreply, NewState}.
