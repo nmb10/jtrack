@@ -5,7 +5,9 @@
 % Public methods
 -export([
     get/1,
-    set/2
+    set/2,
+    update/1,
+    get_all/0
 ]).
 
 
@@ -34,9 +36,9 @@ init([]) ->
             jiffy:decode(BinaryData, [return_maps]);
         false ->
             Default = #{
-                jira_base_url => nil,
-                hours_limit => 8,
+                jira_domain => nil,
                 jira_bearer => nil,
+                hours_limit => 8,
                 featured_issues => []
             },
             Dump = jiffy:encode(Default, [pretty, use_nil]),
@@ -63,9 +65,32 @@ set(Key, Value) ->
     gen_server:call(?MODULE, {set, Key, Value}).
 
 
+update(ConfigMap) ->
+    gen_server:call(?MODULE, {update, ConfigMap}).
+
+
+get_all() ->
+    gen_server:call(?MODULE, {get_all}).
+
+
 handle_call({get, Key}, _From, State) ->
     % #{en => #{
     {reply, maps:get(Key, State), State};
+
+
+handle_call({get_all}, _From, State) ->
+    % #{en => #{
+    {reply, State, State};
+
+
+handle_call({update, ConfigMap}, _From, State) ->
+    % #{en => #{
+    NewState = maps:merge(State, ConfigMap),
+    Dump = jiffy:encode(NewState, [pretty]),
+    ConfigFileName = get_config_filename(),
+    filelib:ensure_dir(ConfigFileName),
+    file:write_file(ConfigFileName, Dump),
+    {reply, NewState, NewState};
 
 
 handle_call({set, Key, Value}, _From, State) ->
