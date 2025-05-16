@@ -2,6 +2,7 @@
 -module(tracker).
 -behavior(gen_server).
 
+
 % Public methods
 -export([
     % Sync.
@@ -286,39 +287,44 @@ date_worklog(Date) ->
 update_track_data(CurrentIssue, _, []) ->
     % New issue, no TrackData (issue just toggled)
     WorkSessionId = list_to_binary(uuid:uuid_to_string(uuid:get_v4())),
-    [[maps:get(<<"key">>, CurrentIssue), [WorkSessionId, get_now_iso(), 1, false]]];
+    TrackData = [[CurrentIssue, [WorkSessionId, get_now_iso(), 1, false]]],
+    TrackData;
 
 
 update_track_data(CurrentIssue, true, TrackData) ->
     % If the same issue, add one minute to issue task.
     [RecentIssueTrack | Rest] = TrackData,
-    [RecentIssueKey, [WorkSessionId, SessionStartTime, RecentIssueTime, _isSaved]] = RecentIssueTrack,
+    [RecentIssue, [WorkSessionId, SessionStartTime, RecentIssueTime, _isSaved]] = RecentIssueTrack,
     CurrentIssueKey = maps:get(<<"key">>, CurrentIssue),
+    RecentIssueKey = maps:get(<<"key">>, RecentIssue),
     case RecentIssueKey == CurrentIssueKey of
       true ->
         % Replace recent (first) issue in track data.
-        UpdatedIssueTrack = [RecentIssueKey, [WorkSessionId, SessionStartTime, RecentIssueTime + 1, false]],
+        UpdatedIssueTrack = [RecentIssue, [WorkSessionId, SessionStartTime, RecentIssueTime + 1, false]],
         [UpdatedIssueTrack] ++ Rest;
       _ ->
         % Add new record to track data.
         NewWorkSessionId = list_to_binary(uuid:uuid_to_string(uuid:get_v4())),
-        [[CurrentIssueKey, [NewWorkSessionId, get_now_iso(), 1, false]]] ++ TrackData
+        [[CurrentIssue, [NewWorkSessionId, get_now_iso(), 1, false]]] ++ TrackData
     end;
 
 
 update_track_data(CurrentIssue, _, _) ->
     WorkSessionId = list_to_binary(uuid:uuid_to_string(uuid:get_v4())),
-    [[maps:get(<<"key">>, CurrentIssue), [WorkSessionId, get_now_iso(), 1, false]]].
+    [[CurrentIssue, [WorkSessionId, get_now_iso(), 1, false]]].
 
 
 get_stat(TrackData) ->
     % Example of TrackData
     % [
-    %   [<<"JT-10575">>,[<<"1123">>, <<"2025-02-24T16:13:07">>,8]],
-    %   [<<"JT-10571">>,[<<"1342">>, <<"2025-02-24T16:17:11">>,5]]
+    %   [#{<<"key">> => <<"JT-10575">>}, [<<"1123">>, <<"2025-02-24T16:13:07">>,8]],
+    %   [#{<<"key">> => <<"JT-10571">>}, [<<"1342">>, <<"2025-02-24T16:17:11">>,5]]
     % ]
     Stat = lists:foldl(
-       fun([Key, [_, _, Count, _]], Acc) -> maps:put(Key, maps:get(Key, Acc, 0) + Count, Acc) end,
+       fun([Issue, [_, _, Count, _]], Acc) ->
+               Key = maps:get(<<"key">>, Issue),
+               maps:put(Key, maps:get(Key, Acc, 0) + Count, Acc)
+       end,
        #{},
        TrackData),
     Stat.
