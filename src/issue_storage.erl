@@ -23,10 +23,16 @@
 
 start_link() ->
     % logger:notice("[custom_set_storage] start_link(): \n"),
+    logger:notice("[issue_storage] start_link(): \n"),
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
 init([]) ->
+
+    Config1 = #{config => #{file => "./logs/issue_storage.log"}, level => debug},
+    logger:add_handler(issue_storage_file_handler, logger_disk_log_h, Config1),
+    logger:notice("Init issue storage."),
+
     erlang:send_after(?INTERVAL, self(), fetch_issues),
 
     Issues = [],
@@ -64,7 +70,7 @@ handle_cast({fixme, Issue}, State) ->
 handle_info(fetch_issues, State) ->
     {_, _, CurrentIssue} = State,
 
-    io:format("[issue_storage] Fetching issues now...\n"),
+    logger:notice("[issue_storage] Fetching issues now..."),
 
     JqlQuery = uri_string:quote(
         "assignee = currentUser() and status in (\"New\", \"To Do\", \"In Progress\")"),
@@ -107,7 +113,9 @@ handle_info(fetch_issues, State) ->
             MyIssues0;
         _ ->
             % FIXME: Notify frontend about the problem with issue upgrade.
-            io:format("[issue_storage] Failed to fetch issues. Returning issues from previous success response (if exists). StatusCode: ~p\n", [StatusCode]),
+            logger:notice(
+                "[issue_storage] Failed to fetch issues. Returning issues from previous success response (if exists). StatusCode: ~p\n",
+                [StatusCode]),
 
             FileName = '/tmp/jtrack-issues-cache.json',
             MyIssues0 = case filelib:is_regular(FileName) of
@@ -120,7 +128,8 @@ handle_info(fetch_issues, State) ->
             MyIssues0
     end,
     FeaturedIssues = config_storage:get(<<"featured_issues">>),
-    io:format("[issue_storage] Issues fetching finished.\n"),
+    logger:notice("[issue_storage] Issues fetching finished."),
+
     erlang:send_after(1 * 60 * 1000, self(), fetch_issues),
     NewState = {FeaturedIssues, MyIssues, CurrentIssue},
     {noreply, NewState}.
