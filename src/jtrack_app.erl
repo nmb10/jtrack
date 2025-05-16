@@ -9,8 +9,10 @@ start(_Type, _Args) ->
         {'_', [  % {"/", index_handler, []},
                {"/api/v1/issues", issue_handler, [update]},
                {"/api/v1/sessions", work_session_handler, [update]},
+               {"/api/v1/notes", notes_handler, [update]},
+               {"/api/v1/config", config_handler, [update]},
                {"/", cowboy_static, {priv_file, jtrack, "static/index.html"}},
-               {"/static/app.js", cowboy_static, {priv_file, jtrack, "static/app.js"}}
+               {"/static/App.jsx", cowboy_static, {priv_file, jtrack, "static/App.jsx"}}
               ]
         }
         % {'/', cowboy_static, {priv_file, jtrack_app, 'src/static/index.html'}}
