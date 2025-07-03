@@ -1,6 +1,5 @@
 # jtrack
-Minimalistic local time tracking tool for jira issues. Just start the timer,
-stop the timer and log time to jira.
+Minimalistic local app to track time on jira issues. Displays issues with start timer, stop timer buttons and ability to log time to jira.
 
 ## Installation:
 
