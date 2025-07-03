@@ -21,6 +21,15 @@ const sessionColors = [
 
 const { useRef, useState, useLayoutEffect, useEffect, useCallback } = React
 
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(
+    function () {
+      console.log('Async: Copying to clipboard was successful!')
+    },
+    function (err) {
+      console.error('Async: Could not copy text: ', err)
+    })
+}
 
 const toggleIssue = (issue) => {
 
@@ -64,6 +73,22 @@ const IssueComponent = ({issue, inProgressIssue}) => {
   return (
     <tr>
       <td style={styles}>
+        <button onClick={() => copyToClipboard(issue.key)}
+                title="Copy issue key to clipboard"
+                style={{ float: 'left', margin: 0, paddingLeft: '5px', paddingRight: '5px' }}>
+          CK
+        </button> |
+        <button onClick={() => copyToClipboard(issue.url)}
+                title="Copy issue URL to clipboard"
+                style={{ float: 'left', margin: 0, paddingLeft: '5px', paddingRight: '5px' }}>
+          CU
+        </button> |
+        <button onClick={() => copyToClipboard(issue.key + ': ' + issue.title)}
+                title="Copy issue title to clipboard"
+                style={{ float: 'left', margin: 0, paddingLeft: '5px', paddingRight: '5px' }}>
+          CT
+        </button>
+        <br />
         <a href={issue.url}>
           {issue.key}
         </a>: {issue.title}
@@ -101,6 +126,22 @@ const CurrentIssueWidget = ({issue}) => {
       <tbody>
         <tr>
           <td style={styles}>
+            <button onClick={() => copyToClipboard(issue.key)}
+                    title="Copy issue key to clipboard"
+                    style={{ float: 'left', margin: 0, paddingLeft: '5px', paddingRight: '5px' }}>
+              CK
+            </button> |
+            <button onClick={() => copyToClipboard(issue.url)}
+                    title="Copy issue URL to clipboard"
+                    style={{ float: 'left', margin: 0, paddingLeft: '5px', paddingRight: '5px' }}>
+              CU
+            </button> |
+            <button onClick={() => copyToClipboard(issue.key + ': ' + issue.title)}
+                    title="Copy issue title to clipboard"
+                    style={{ float: 'left', margin: 0, paddingLeft: '5px', paddingRight: '5px' }}>
+              CT
+            </button>
+            <br />
             <a href={issue.url} title={issue.title}>
               {issue.key}: {issueTitle}
             </a>
