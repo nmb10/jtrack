@@ -8,13 +8,12 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-    io:format("Starting share_storage supervisor.\n"),
+    io:format("Starting issue_storage supervisor.\n"),
     Procs = [
         #{
             id => issue_storage,
             start => {issue_storage, start_link, []},
-            % restart => permanent,
-            restart => transient,
+            restart => permanent,
             shutdown => 2000,
             type => worker,
             modules => [issue_storage]

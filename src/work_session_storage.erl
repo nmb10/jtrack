@@ -55,9 +55,10 @@ handle_cast({save_work_session, Session}, State) ->
     Method = post,
     Url = io_lib:format(
             "https://~s/rest/api/2/issue/~s/worklog",
-            [config_storage:get(<<"jira_base_url">>), IssueKey]),
+            [config_storage:get(<<"jira_domain">>), IssueKey]),
+    TimeZone = <<"+0300">>,  % FIXME: Take from jira API
     ReqBody = jiffy:encode(#{
-        <<"started">> => <<StartedAt/binary, ".000+0000">>,
+        <<"started">> => <<StartedAt/binary, ".000", TimeZone/binary>>,
         % <<"started">>: "2025-02-28T10:30:00.000+0000",
         <<"timeSpentSeconds">> => IssueMinutes * 60
     }),
@@ -70,7 +71,7 @@ handle_cast({save_work_session, Session}, State) ->
     {ok, ClientRef} = hackney:request(Method, Url, Headers, stream, Options),
     ok = hackney:send_body(ClientRef, ReqBody),
     {ok, StatusCode, _Headers, ClientRef} = hackney:start_response(ClientRef),
-    {ok, _Body} = hackney:body(ClientRef),
+    {ok, Body} = hackney:body(ClientRef),
 
     case StatusCode of
         201 ->
@@ -80,7 +81,7 @@ handle_cast({save_work_session, Session}, State) ->
             % When session saved we need to write it to day dump.
             tracker:mark_as_logged(Session);
         _ ->
-            io:format("Failed to save time. StatusCode: ~p\n", [StatusCode]),
+            io:format("Failed to save time. StatusCode: ~p, Body: ~p\n", [StatusCode, Body]),
             []
     end,
 
