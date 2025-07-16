@@ -3,6 +3,7 @@ Minimalistic local app to track time on jira issues. Displays issues with start 
 
 ## Installation:
 
+
 Note: Installation requires erlang, recommended version is Erlang/OTP 25
 
 1. Clone the repo
