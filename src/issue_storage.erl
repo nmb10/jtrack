@@ -76,9 +76,40 @@ handle_cast({fixme, Issue}, State) ->
 
 
 handle_info(fetch_issues, State) ->
-    {_, _, CurrentIssue} = State,
+    {FeaturedIssues, Issues, CurrentIssue} = State,
+    logger:notice("[issue_storage] Fetching issues now (async)..."),
+    Self = self(),
+    spawn(fun() -> fetch_issues_worker(Self) end),
+    {noreply, {FeaturedIssues, Issues, CurrentIssue}};
 
-    logger:notice("[issue_storage] Fetching issues now..."),
+handle_info({issues_fetched, MyIssues}, State) ->
+    {_, _, CurrentIssue} = State,
+    FeaturedIssues = config_storage:get(<<"featured_issues">>),
+    NewState = {FeaturedIssues, MyIssues, CurrentIssue},
+    logger:notice("[issue_storage] Issues fetching finished. Next fetch after 1 minute."),
+    erlang:send_after(1 * 60 * 1000, self(), fetch_issues),
+    {noreply, NewState}.
+
+
+% Runs in its own process so a slow/blocked Jira request never stalls
+% the issue_storage gen_server (and thus never times out get_issues/0).
+% Wrapped so ANY failure here (bad match, unexpected JSON shape, etc.)
+% still reports back and keeps the periodic fetch alive, instead of
+% silently dying and stopping the reschedule loop forever.
+fetch_issues_worker(ServerPid) ->
+    MyIssues = try
+        fetch_issues_from_jira()
+    catch
+        Class:Reason:Stacktrace ->
+            logger:error(
+                "[issue_storage] fetch_issues_worker crashed: ~p:~p~n~p~n",
+                [Class, Reason, Stacktrace]),
+            get_from_cache()
+    end,
+    ServerPid ! {issues_fetched, MyIssues}.
+
+
+fetch_issues_from_jira() ->
     % For testing long fetches
     % timer:sleep(8000),
 
@@ -106,14 +137,12 @@ handle_info(fetch_issues, State) ->
           <<"url">> => <<"https://", JiraDomain/binary, "/browse/", IssueKey/binary>>,
           <<"status">> => maps:get(<<"name">>, maps:get(<<"status">>, Fields))}
     end,
-    % FIXME: Move long fetch to the process to not block the whole issue_storage
-    %  Pid = spawn_link(?MODULE, fetch_issuessome_long_running_task, [State]),
     HackneyResponse = hackney:request(Method, URL, Headers, Payload, Options),
 
-    MyIssues = case HackneyResponse of
+    case HackneyResponse of
         {ok, StatusCode, _RespHeaders, ClientRef} ->
             % Success
-            MyIssues1 = case StatusCode of
+            case StatusCode of
                 200 ->
                     {ok, ResponseBody} = hackney:body(ClientRef),
                     SearchResponseMap = jiffy:decode(ResponseBody, [return_maps]),
@@ -131,8 +160,7 @@ handle_info(fetch_issues, State) ->
                         "[issue_storage] Failed to fetch issues. Returning issues from previous success response (if exists). StatusCode: ~p\n",
                         [StatusCode]),
                     get_from_cache()
-            end,
-            MyIssues1;
+            end;
         {error, connect_timeout} ->
             %% Handle connection timeout specifically
             logger:error("Connection timed out.~n"),
@@ -145,13 +173,7 @@ handle_info(fetch_issues, State) ->
             %% Handle other general errors
             logger:error("Hackney request failed: ~p~n", [Reason]),
             get_from_cache()
-    end,
-    FeaturedIssues = config_storage:get(<<"featured_issues">>),
-    logger:notice("[issue_storage] Issues fetching finished."),
-
-    erlang:send_after(1 * 60 * 1000, self(), fetch_issues),
-    NewState = {FeaturedIssues, MyIssues, CurrentIssue},
-    {noreply, NewState}.
+    end.
 
 
 get_from_cache() ->
